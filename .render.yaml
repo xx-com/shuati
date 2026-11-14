@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: shuati
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: echo skip
+    startCommand: node server.js
+    healthCheckPath: /
+    autoDeploy: true
