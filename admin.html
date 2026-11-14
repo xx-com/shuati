@@ -82,7 +82,7 @@
 
   function load(key) {
     $('err').textContent = '';
-    fetch('/api/admin/stats?key=' + encodeURIComponent(key))
+    fetch('/api/admin/stats', { headers: { 'X-Admin-Key': key } })
       .then(function (r) { return r.json().then(function (j) { return { c: r.status, j: j }; }); })
       .then(function (res) {
         if (!res.j.ok) {

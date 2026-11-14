@@ -10,7 +10,7 @@ const crypto = require('crypto');
 const ROOT = __dirname;
 const PORT = Number(process.env.PORT || 8123);
 const DATA = path.join(ROOT, 'server-data');
-const ADMIN_KEY = process.env.ADMIN_KEY || 'shuati2026';
+const ADMIN_KEY = process.env.ADMIN_KEY || '';
 const USERS_F = path.join(DATA, 'users.json');
 const SESS_F = path.join(DATA, 'sessions.json');
 const STATE_D = path.join(DATA, 'states');
@@ -27,6 +27,7 @@ function writeJSON(f, obj) {
 
 let users = readJSON(USERS_F, {});
 let sessions = readJSON(SESS_F, {});
+const ADMIN_HITS = {};
 
 function hashPass(pw, salt) {
   return crypto.scryptSync(String(pw), Buffer.from(salt, 'hex'), 64).toString('hex');
@@ -105,8 +106,16 @@ async function handleApi(req, res, p) {
   }
 
   if (p === '/admin/stats') {
-    const key = new URLSearchParams(String(req.url).split('?')[1] || '').get('key') || '';
-    if (key !== ADMIN_KEY) return send(res, 401, { ok: false, msg: '管理密钥不正确' });
+    if (!ADMIN_KEY) return send(res, 503, { ok: false, msg: '后台未启用：服务器未配置 ADMIN_KEY 环境变量' });
+    const ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+    const now = Date.now();
+    const rec = ADMIN_HITS[ip] || (ADMIN_HITS[ip] = { n: 0, t: now });
+    if (now - rec.t > 60000) { rec.n = 0; rec.t = now; }
+    if (rec.n >= 8) return send(res, 429, { ok: false, msg: '尝试次数过多，请 1 分钟后再试' });
+    const key = String(req.headers['x-admin-key'] || '') ||
+      new URLSearchParams(String(req.url).split('?')[1] || '').get('key') || '';
+    if (key !== ADMIN_KEY) { rec.n++; return send(res, 401, { ok: false, msg: '管理密钥不正确' }); }
+    rec.n = 0;
     const todayStr = new Date().toISOString().slice(0, 10);
     const days = {};
     const perUser = [];
