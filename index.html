@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#007AFF" />
+<title>刷题闭环 · 中职单招计算机备考</title>
+<link rel="stylesheet" href="assets/css/app.css" />
+</head>
+<body>
+<div id="auth" class="auth">
+  <div class="auth__panel">
+    <div class="auth__brand">
+      <span class="logo-mark">刷</span>
+      <div>
+        <h1>刷题闭环</h1>
+        <p>中职单招 · 计算机专业备考工作台</p>
+      </div>
+    </div>
+
+    <div class="auth__tabs" role="tablist">
+      <button class="auth__tab is-on" data-tab="login" role="tab">登录</button>
+      <button class="auth__tab" data-tab="reg" role="tab">注册</button>
+    </div>
+
+    <form id="authForm" class="auth__form" autocomplete="off">
+      <label class="field">
+        <span>账号</span>
+        <input id="authUser" type="text" placeholder="请输入账号，如 zhangsan" maxlength="20" required />
+      </label>
+      <label class="field">
+        <span>密码</span>
+        <input id="authPass" type="password" placeholder="至少 4 位" minlength="4" maxlength="32" required />
+      </label>
+      <label class="field" id="pass2Wrap" hidden>
+        <span>确认密码</span>
+        <input id="authPass2" type="password" placeholder="再次输入密码" maxlength="32" />
+      </label>
+      <p class="auth__err" id="authErr"></p>
+      <button class="btn btn--primary btn--block" type="submit" id="authSubmit">进入学习台</button>
+    </form>
+
+    <div class="auth__foot">
+      <button class="btn btn--quiet" id="guestBtn">先随便看看（游客体验）</button>
+      <p>通过服务器访问时，账号与学习进度保存在本机 server-data 目录；离线打开则退回浏览器本地存储。</p>
+    </div>
+
+    <ul class="auth__points">
+      <li><b>2616</b> 道内置题 · 7 个科目</li>
+      <li>错题按 <b>1/2/4/7/15/30</b> 天自动排期复习</li>
+      <li>答对自动屏蔽，题单越练越干净</li>
+    </ul>
+  </div>
+  <div class="auth__art" aria-hidden="true">
+    <div class="auth__quote">
+      <p>“不是题库大，而是练 → 错 → 复习 → 再练。”</p>
+      <span>把散乱的练习题，变成一个会自我诊断的系统</span>
+    </div>
+  </div>
+</div>
+
+<div id="app" class="app" hidden>
+  <aside class="rail">
+    <div class="rail__brand">
+      <span class="logo-mark">刷</span>
+      <div>
+        <strong>刷题闭环</strong>
+        <small>单招计算机备考</small>
+      </div>
+    </div>
+    <nav class="rail__nav" id="railNav"></nav>
+    <div class="rail__foot">
+      <div class="rail__user">
+        <span class="avatar" id="railAvatar">学</span>
+        <div>
+          <b id="railName">同学</b>
+          <small id="railStreak">连续 0 天</small>
+        </div>
+      </div>
+      <button class="btn btn--quiet btn--sm" id="logoutBtn">退出</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <header class="topbar">
+      <button class="icon-btn topbar__menu" id="menuBtn" aria-label="菜单"></button>
+      <div class="topbar__title" id="topTitle">首页</div>
+      <div class="topbar__actions">
+        <button class="icon-btn" id="themeBtn" aria-label="切换主题"></button>
+        <button class="icon-btn" id="fontBtn" aria-label="调整字号">A</button>
+      </div>
+    </header>
+    <main id="view" class="view"></main>
+  </div>
+
+  <nav class="tabbar" id="tabbar"></nav>
+</div>
+
+<div id="toast" class="toast" hidden></div>
+<div id="modal" class="modal" hidden>
+  <div class="modal__mask" data-close></div>
+  <div class="modal__box" role="dialog" aria-modal="true">
+    <div class="modal__head">
+      <h3 id="modalTitle">提示</h3>
+      <button class="icon-btn" data-close aria-label="关闭">✕</button>
+    </div>
+    <div class="modal__body" id="modalBody"></div>
+    <div class="modal__foot" id="modalFoot"></div>
+  </div>
+</div>
+
+<script src="data/questions.js"></script>
+<script src="assets/js/bank.js"></script>
+<script src="assets/js/db.js"></script>
+<script src="assets/js/ui.js"></script>
+<script src="assets/js/view-home.js"></script>
+<script src="assets/js/view-practice.js"></script>
+<script src="assets/js/view-learn.js"></script>
+<script src="assets/js/view-exam.js"></script>
+<script src="assets/js/view-review.js"></script>
+<script src="assets/js/view-mine.js"></script>
+<script src="assets/js/app.js"></script>
+</body>
+</html>
