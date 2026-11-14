@@ -10,6 +10,7 @@ const crypto = require('crypto');
 const ROOT = __dirname;
 const PORT = Number(process.env.PORT || 8123);
 const DATA = path.join(ROOT, 'server-data');
+const ADMIN_KEY = process.env.ADMIN_KEY || 'shuati2026';
 const USERS_F = path.join(DATA, 'users.json');
 const SESS_F = path.join(DATA, 'sessions.json');
 const STATE_D = path.join(DATA, 'states');
@@ -101,6 +102,35 @@ async function handleApi(req, res, p) {
       crypto.timingSafeEqual(Buffer.from(h, 'hex'), Buffer.from(rec.hash, 'hex'));
     if (!ok) return send(res, 401, { ok: false, msg: '密码不正确' });
     return send(res, 200, { ok: true, token: newToken(u), user: u, state: readJSON(stateFile(u), null) });
+  }
+
+  if (p === '/admin/stats') {
+    const key = new URLSearchParams(String(req.url).split('?')[1] || '').get('key') || '';
+    if (key !== ADMIN_KEY) return send(res, 401, { ok: false, msg: '管理密钥不正确' });
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const days = {};
+    const perUser = [];
+    let totalAns = 0, activeToday = 0;
+    Object.keys(users).forEach(u => {
+      const d = users[u].created || '?';
+      days[d] = (days[d] || 0) + 1;
+      const st = readJSON(stateFile(u), null);
+      let ans = 0, exams = 0, upd = '';
+      if (st) {
+        ans = st.answers ? Object.keys(st.answers).length : 0;
+        exams = st.exams ? st.exams.length : 0;
+        upd = st.updated ? new Date(st.updated).toISOString().slice(0, 10) : '';
+        if (upd === todayStr) activeToday++;
+      }
+      totalAns += ans;
+      perUser.push({ u: u, created: d, ans: ans, exams: exams, upd: upd });
+    });
+    perUser.sort((a, b) => b.ans - a.ans);
+    return send(res, 200, {
+      ok: true, today: todayStr, total: Object.keys(users).length,
+      days: days, totalAns: totalAns, activeToday: activeToday,
+      sessions: Object.keys(sessions).length, perUser: perUser
+    });
   }
 
   const me = tokenUser(req);

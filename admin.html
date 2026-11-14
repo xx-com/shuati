@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>运营后台 · 刷题闭环</title>
+<style>
+  :root { --bg:#F2F2F7; --card:#fff; --ink:#1c1c1e; --sub:#8e8e93; --line:#e5e5ea; --blue:#007AFF; --green:#34C759; --red:#FF3B30; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#000; --card:#1C1C1E; --ink:#fff; --sub:#98989f; --line:#2c2c2e; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.6 -apple-system,"SF Pro Text","PingFang SC","Microsoft YaHei",sans-serif; }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 24px 16px 60px; }
+  h1 { font-size: 26px; font-weight: 800; margin: 8px 0 2px; }
+  .sub { color: var(--sub); font-size: 13px; }
+  .bar { display:flex; gap:10px; align-items:center; margin:18px 0; flex-wrap:wrap; }
+  input, button { font: inherit; border-radius: 12px; border: 1px solid var(--line); padding: 10px 14px; background: var(--card); color: var(--ink); }
+  input { flex: 1; min-width: 180px; }
+  button { background: var(--blue); color: #fff; border: 0; font-weight: 600; cursor: pointer; }
+  button.ghost { background: transparent; color: var(--blue); border: 1px solid var(--blue); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+  .kpi { background: var(--card); border-radius: 16px; padding: 16px; }
+  .kpi b { display:block; font-size: 28px; font-weight: 800; letter-spacing: -.5px; }
+  .kpi span { color: var(--sub); font-size: 12.5px; }
+  .card { background: var(--card); border-radius: 16px; padding: 18px; margin-top: 16px; }
+  .card h3 { margin: 0 0 12px; font-size: 15px; font-weight: 700; }
+  .trend { display:flex; align-items:flex-end; gap:6px; height: 120px; }
+  .trend .col { flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; min-width:0; }
+  .trend .stick { width: 100%; max-width: 34px; background: linear-gradient(180deg, var(--blue), #4da3ff); border-radius: 6px 6px 2px 2px; min-height: 2px; }
+  .trend .d { font-size: 10px; color: var(--sub); white-space: nowrap; }
+  .trend .v { font-size: 11px; font-weight: 700; }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  th, td { text-align: left; padding: 9px 8px; border-bottom: 1px solid var(--line); }
+  th { color: var(--sub); font-size: 12px; font-weight: 600; }
+  .tag { display:inline-block; padding: 1px 8px; border-radius: 999px; font-size: 11.5px; font-weight: 600; background: rgba(0,122,255,.12); color: var(--blue); }
+  .tag.on { background: rgba(52,199,89,.15); color: var(--green); }
+  .err { color: var(--red); font-size: 13px; min-height: 18px; }
+  #app[hidden], #login[hidden] { display: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>刷题闭环 · 运营后台</h1>
+  <p class="sub">仅本机可见，数据来自服务器账号目录</p>
+
+  <div id="login" class="bar">
+    <input id="key" type="password" placeholder="管理密钥" />
+    <button id="go">查看数据</button>
+  </div>
+
+  <div id="app" hidden>
+    <div class="bar">
+      <button class="ghost" id="refresh">刷新</button>
+      <span class="sub" id="asof"></span>
+    </div>
+    <div class="grid" id="kpis"></div>
+    <div class="card">
+      <h3>注册趋势（有记录的日期）</h3>
+      <div class="trend" id="trend"></div>
+    </div>
+    <div class="card">
+      <h3>用户明细（按答题量排序）</h3>
+      <table>
+        <thead><tr><th>账号</th><th>注册日</th><th>答题</th><th>考试</th><th>最近活跃</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </div>
+  <p class="err" id="err"></p>
+</div>
+
+<script>
+(function () {
+  var KEYF = 'zk:adminkey';
+  function $(id) { return document.getElementById(id); }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+
+  function kpi(label, val, color) {
+    return '<div class="kpi"><b style="color:' + (color || 'var(--ink)') + '">' + val + '</b><span>' + label + '</span></div>';
+  }
+
+  function load(key) {
+    $('err').textContent = '';
+    fetch('/api/admin/stats?key=' + encodeURIComponent(key))
+      .then(function (r) { return r.json().then(function (j) { return { c: r.status, j: j }; }); })
+      .then(function (res) {
+        if (!res.j.ok) {
+          $('err').textContent = res.j.msg || '密钥不正确';
+          if (res.c === 401) { localStorage.removeItem(KEYF); $('app').hidden = true; $('login').hidden = false; }
+          return;
+        }
+        var d = res.j;
+        localStorage.setItem(KEYF, key);
+        $('login').hidden = true; $('app').hidden = false;
+        $('asof').textContent = '统计时间 ' + d.today + ' · 在线会话 ' + d.sessions;
+
+        var todayNew = d.days[d.today] || 0;
+        $('kpis').innerHTML =
+          kpi('注册总量', d.total) +
+          kpi('今日新增', todayNew, 'var(--blue)') +
+          kpi('今日活跃', d.activeToday, 'var(--green)') +
+          kpi('累计答题', d.totalAns) +
+          kpi('在线会话', d.sessions);
+
+        var ds = Object.keys(d.days).sort().slice(-14);
+        var max = 1;
+        ds.forEach(function (k) { max = Math.max(max, d.days[k]); });
+        $('trend').innerHTML = ds.map(function (k) {
+          var v = d.days[k];
+          return '<div class="col"><span class="v">' + v + '</span>' +
+            '<div class="stick" style="height:' + Math.round(v / max * 90) + 'px"></div>' +
+            '<span class="d">' + k.slice(5) + '</span></div>';
+        }).join('') || '<span class="sub">暂无数据</span>';
+
+        $('rows').innerHTML = d.perUser.map(function (p) {
+          var on = p.upd === d.today;
+          return '<tr><td>' + esc(p.u) + '</td><td>' + esc(p.created) + '</td>' +
+            '<td>' + p.ans + '</td><td>' + p.exams + '</td>' +
+            '<td><span class="tag' + (on ? ' on' : '') + '">' + (on ? '今日活跃' : esc(p.upd || '未使用')) + '</span></td></tr>';
+        }).join('') || '<tr><td colspan="5" class="sub">暂无注册用户</td></tr>';
+      })
+      .catch(function () { $('err').textContent = '无法连接服务器（需通过 node server.js 或 Render 访问，file:// 打开无后台）'; });
+  }
+
+  $('go').onclick = function () { load($('key').value.trim()); };
+  $('key').addEventListener('keydown', function (e) { if (e.key === 'Enter') load($('key').value.trim()); });
+  $('refresh').onclick = function () { load(localStorage.getItem(KEYF) || $('key').value.trim()); };
+  var saved = localStorage.getItem(KEYF);
+  if (saved) load(saved);
+})();
+</script>
+</body>
+</html>
